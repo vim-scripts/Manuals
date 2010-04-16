@@ -1,0 +1,47 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=3060
+
+Provides context sensitive word lookup. The manuals in vimhelp format that are not 
+related to Vim can be kept in separate locations with separate tagfiles.
+
+The context sensitive lookup is implemented by the plugin vxlib/context.vim. When a 
+manual lookup is required (mapped to K), the plugin checks the context the cursor is 
+in - the current filetype and the current syntax element. Then it finds all the help 
+providers that were registered for the detected context. The highest scored provider 
+is executed an the results are displayed. It is also possible to display a list of 
+providers applicable in the current context and select one (\km); if vimuiex is 
+installed, a popup list will be displayed, otherwise the choices are echoed to the 
+screen and the uesr enters a choice.
+
+Example: when you're editing Python kode and press K on a keyword, an entry from the 
+Python documentation will be displayed (the output from pydoc). When the cursor is in 
+a Python comment or a string, dict will be used instead. Similarly, when editing 
+HTML, help for CSS can be displayed when the cursor is in the <style> section.
+
+There are three possible types of results a provider can produce: 
+   t - show help text for keyword
+   k - list similar keywords (and find help for the selected one)
+   g - grep the manuals to find occurences of the word
+
+The library comes with the following providers (supported types are in parentheses):
+   vimhelp (tkg) - internal vim help
+   extvimhelp (tkg) - external help in vimhelp format, stored in a separate location
+   man (t) - unix man
+   pydoc (tg) - python documentation, requires pydoc program
+   pydiction (k) - uses the dictionary produced by vimscript#850
+   cmakeref (tkg) - vimscript#3045, uses extvimhelp
+   cssref (tkg) - vimscript#918, uses extvimhelp
+   crefvim (tkg) - vimscript#614, vimscript#2353, uses extvimhelp
+   luarefvim (tkg) - vimscript#1291, uses extvimhelp
+   dict (t) - find a dictionary entry using the dict program
+
+The providers that use extvimhelp expect the manuals to be installed in the location 
+set in g:vxlib_manuals_directory. Initially this location is set to ~/.vim/manuals 
+(actually the script takes the first item from &rtp and appends /manuals to it). Each 
+manual is stored in a subdirectory of this location, the name of the subdirectory is 
+the same as the name of the provider, eg.
+   ~/.vim/manuals/cmakeref
+   ~/.vim/manuals/luarefvim
+
+After you install each manual, don't forget to run :helptags %:p:h on a file from 
+the manual.
+
