@@ -23,6 +23,7 @@ function! manuals#display#Echo(rslt)
    for line in a:rslt[1]
       echo line . "\n"
    endfor
+   return -1
 endfunc
 
 
@@ -34,6 +35,10 @@ function! manuals#display#InputList(rslt)
       call add(choices, (i + 1) . '. ' . a:rslt[1][i])
       let i += 1
    endfor
+
+   if len(choices) < 1
+      return -1
+   endif
    
    let sel = inputlist(choices)
    if sel == '' | return -1 | endif
@@ -46,33 +51,81 @@ endfunc
 
 
 " Use an existing QuickFixList.
-" Doesn't return anything, the QuickFixList is a self-contained displayer.
+" The QuickFixList is a self-contained displayer.
 function! manuals#display#QuickFixList(rslt)
    copen
+   return -1
 endfunc
 
 
-" Display text
-function! manuals#display#OpenPreview(rslt)
+function! manuals#display#FindHelpWindow()
+   " Try to find a vimhelp window
+   let nwin = winnr('$')
+   for iw in range(nwin)
+      let ibuf = winbufnr(iw+1)
+      let bt=getbufvar(ibuf, '&buftype')
+      if bt=='help'
+         return iw+1
+      endif
+   endfor
+
+   " try to find g:manuals_help_buffer
+   let reHelpBuf = escape(g:manuals_help_buffer, '\*.') . '$'
+   for iw in range(nwin)
+      let ibuf = winbufnr(iw+1)
+      let bname = bufname(ibuf)
+      if bname =~ reHelpBuf
+         return iw+1
+      endif 
+   endfor
+
+   " try to find a read-only help buffer
+   for iw in range(nwin)
+      let ibuf = winbufnr(iw+1)
+      let bt = getbufvar(ibuf, '&filetype')
+      let bro = getbufvar(ibuf, '&readonly')
+      if bt == 'help' && bro != 0
+         return iw+1
+      endif
+   endfor
+ 
+   return -1
+endfunc
+
+function! manuals#display#MakeTmpHelpBuf(tagfiles, createwin)
+   if a:createwin
+      let iwhelp = manuals#display#FindHelpWindow()
+      if iwhelp >= 0
+        silent! exec iwhelp . ' wincmd w'
+      else
+         " no help window found: create one
+         silent! help
+      endif
+   endif
+   let name = g:manuals_help_buffer
+   silent! exec 'edit ' . name
+   setl buftype=nofile readonly nomodifiable nobuflisted noswapfile nonumber
+   let bufnr=bufnr(name)
+   if a:tagfiles != ''
+      let &l:tags=a:tagfiles
+   endif
+   return bufnr
+endfunc
+
+
+" Display text - in a temporary buffer
+function! manuals#display#OpenManualsBuffer(rslt)
    let lines = a:rslt[1]
    let pos = getpos(".")
    let win = winnr()
-   pedit ***Manual***
-   silent! wincmd P
-   if ! &previewwindow
-      call setpos(".", pos)
-      return
-   endif
-   exec "resize " . &lines / 2
-   b ***Manual***
-   setl buftype=nofile
-   setl noreadonly
-   norm ggVGd
+   "let nw = winnr('$')
+   let tmpbuf = manuals#display#MakeTmpHelpBuf('', 1)
+   "let wincreated = (nw != winnr('$'))
+   setl modifiable noreadonly
+   norm! ggVGd
    call setline(1, lines)
-   norm gg
-   setl readonly
-   exec win . "wincmd w"
-   call setpos(".", pos)
+   norm! gg
+   setl readonly nomodifiable
 endfunc
 
 
@@ -83,6 +136,7 @@ endfunc
 function! manuals#display#OpenVxText(rslt)
    let popopt = {}
    call vimuiex#vxlist#VxPopup(a:rslt[1], 'Manual-Text', popopt)
+   return -1
 endfunc
 
 function! s:VxcbInitOpenGrepResults(pyListVar)
@@ -209,7 +263,7 @@ endfunc
    call s:VxMan_AddMenuDisplay('choice', 'manuals#display#InputList')
 
    call s:VxMan_AddTextDisplay('echo', 'manuals#display#Echo', 'lb')
-   call s:VxMan_AddTextDisplay('preview', 'manuals#display#OpenPreview', 'bl')
+   call s:VxMan_AddTextDisplay('manbuffer', 'manuals#display#OpenManualsBuffer', 'bl')
 
    call s:VxMan_AddListDisplay('choice', 'manuals#display#InputList', 'l')
    call s:VxMan_AddGrepDisplay('choice', 'manuals#display#InputList', 'l')

@@ -9,7 +9,6 @@ if vxlib#plugin#StopLoading('#au#manuals#search')
    finish
 endif
 
-
 " Getters
 
 function! s:SmartCapture(cmd) " TODO: vxlib#cmd#SmartCapture()
@@ -114,7 +113,7 @@ endfunc
 function! manuals#search#VimHelp(w1, w2, kind, getter, displayer, ...)
    let result = ['']
    if a:kind == 'k'
-      let tmpbuf='***ManualsHelpType***'
+      let tmpbuf=g:manuals_help_buffer
       try
          " use a temp help buffer to build the taglist
          " (because taglist() uses a buffer-local setting)
@@ -171,53 +170,11 @@ function! manuals#search#VimHelp(w1, w2, kind, getter, displayer, ...)
    return result
 endfunc
 
-function! s:FindHelpWindow()
-   let ihelp = -1
-   let nwin = winnr('$')
-   for iw in range(nwin)
-      let ibuf = winbufnr(iw+1)
-      let bt=getbufvar(ibuf, '&buftype')
-      if bt=='help'
-         let ihelp = iw+1
-         return ihelp
-      endif
-   endfor
-   if ihelp < 0
-      for iw in range(nwin)
-         let ibuf = winbufnr(iw+1)
-         let bt=getbufvar(ibuf, '&filetype')
-         if bt=='help'
-            let ihelp = iw+1
-            return ihelp
-         endif
-      endfor
-   endif
- 
-   return ihelp
-endfunc
-
 function! s:FindTagFiles(roots, tagfiles)
    let tagfiles=globpath(a:roots, a:tagfiles)
    let tagfiles=escape(tagfiles, ', \')
    let tagfiles=join(split(tagfiles, "\n"), ',')
    return tagfiles
-endfunc
-
-function! s:MakeTmpHelpBuf(tagfiles, createwin)
-   if a:createwin
-      let iwhelp = s:FindHelpWindow()
-      if iwhelp >= 0
-        silent! exec iwhelp . ' wincmd w'
-      else
-         silent! help
-      endif
-   endif
-   let name = '***ManualsHelpType***'
-   silent! exec 'edit ' . name
-   let bufnr=bufnr(name)
-   let &l:tags=a:tagfiles
-   setl buftype=nofile readonly nomodifiable nobuflisted
-   return bufnr
 endfunc
 
 let s:helpAutocmdsSet = {}
@@ -239,7 +196,7 @@ function! manuals#search#ExternVimHelp(w1, w2, kind, getter, displayer, ...)
    if !has_key(s:helpAutocmdsSet, opts.helpdirs)
       for adir in split(opts.helpdirs, ',')
          exec 'autocmd BufEnter ' . adir . 
-                  \ '/*.txt setl ft=help readonly nomodifiable nobuflisted isk=!-~,^*,^\|,^\"'
+                  \ '/*.txt setl ft=help readonly noswapfile nomodifiable nobuflisted isk=!-~,^*,^\|,^\"'
       endfor
       let s:helpAutocmdsSet[opts.helpdirs] = 1
    endif
@@ -253,7 +210,7 @@ function! manuals#search#ExternVimHelp(w1, w2, kind, getter, displayer, ...)
             let tmpbuf = -1
          else
             let nw = winnr('$')
-            let tmpbuf = s:MakeTmpHelpBuf(tagfiles, 1)
+            let tmpbuf = manuals#display#MakeTmpHelpBuf(tagfiles, 1)
             let wincreated = (nw != winnr('$'))
          endif
          try
@@ -292,7 +249,7 @@ function! manuals#search#ExternVimHelp(w1, w2, kind, getter, displayer, ...)
          if tagfiles == &l:tags
             let tmpbuf = -1
          else
-            let tmpbuf = s:MakeTmpHelpBuf(tagfiles, 0)
+            let tmpbuf = manuals#display#MakeTmpHelpBuf(tagfiles, 0)
          endif
          let htags=taglist(a:w1)
          let htlist = []

@@ -212,7 +212,7 @@ endfunc
 let s:VxlibManual_DisplayOrder = {
          \ 'default': 'echo',
          \ 'default-m': 'vimuiex,tlib,choice',
-         \ 'default-t': 'vimuiex,preview,echo',
+         \ 'default-t': 'vimuiex,manbuffer,echo',
          \ 'default-k': 'vimuiex,tlib,choice',
          \ 'default-g': 'vimuiex,tlib,qfixlist,choice',
          \ 'vimhelp-t': ''
@@ -402,13 +402,13 @@ function! manuals#core#ShowManual(count, visual, helpkind)
    " 2 (retrieve text) below.
 
    if rslt[0] =~ 'e'
-      echo "Error: " . rslt[1]
+      echom "Error: " . rslt[1]
    elseif rslt[0] =~ 'w'
-      echo rslt[1]
+      echom rslt[1]
    elseif disply.fn != "" && rslt[0] != ''
       " TODO: convert the result (rslt[1]) if necessary
       exec 'let choice=' . disply.fn . '(rslt)'
-      if choice >= 0
+      if ! (rslt[0] =~ 't') && choice >= 0
          let keyword = rslt[1][choice] " TODO: rslt[1] may not be a list: check type in rslt[0]!
          let keyword = split(keyword, "\t")[0]
          if rslt[0] =~ 'h' || rslt[0] =~ 'g'
@@ -470,6 +470,7 @@ finish
 "    - pass the input-type when calling the getter
 "
 " <VIMPLUGIN id="manuals#showmanual" >
+   call s:CheckSetting('g:manuals_help_buffer', '"*Manual*"')
    nmap <silent> <unique> <Plug>VxManText :call manuals#core#ShowManual(v:count,'','t')<cr>
    vmap <silent> <unique> <Plug>VxManText :<C-U>call manuals#core#ShowManual(v:count,visualmode(),'t')<cr>
    nmap <silent> <unique> <Plug>VxManKeyword :call manuals#core#ShowManual(v:count,'','k')<cr>
