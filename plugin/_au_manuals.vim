@@ -57,6 +57,27 @@ function! s:ContinueLoading(name)
  return 0
 endfunc
 
+function! s:PluginExists(name, plugfile)
+   try
+      let knp = g:VxKnownPlugins[a:name]
+      return knp != 0
+   catch /.*/
+   endtry
+   if exists('g:loaded_' . a:name)
+      exec 'let g:VxKnownPlugins[a:name]=g:loaded_'. a:name
+      return 1
+   endif
+   if a:plugfile =~ '^\w\+/\w'
+      let plugfiles=globpath(&rtp, a:plugfile)
+      if len(plugfiles) > 0
+         let g:VxKnownPlugins[a:name] = plugfiles
+         return 1
+      endif
+   endif
+   let g:VxKnownPlugins[a:name] = 0
+   return 0
+endfunc
+
 if !exists("g:VxlibManuals_NewDisplayers")
  let g:VxlibManuals_NewDisplayers = []
 endif
